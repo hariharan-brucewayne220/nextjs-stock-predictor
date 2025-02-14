@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import axios from "axios";
 
-const SENTIMENT_API_URL = "https://684d-34-48-184-138.ngrok-free.app/predict"; // ✅ Update with your Ngrok URL
+const SENTIMENT_API_URL = "https://hariharan220-finbert-sentiment.hf.space/predict"; // ✅ Update with your Ngrok URL
 
 export async function POST(req: Request) {
   try {

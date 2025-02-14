@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import axios from "axios";
 
 const HF_CHATBOT_MODEL = "google/gemma-2b-it";  // 🔹 Replace if needed
-const HF_API_KEY = process.env.HF_API_KEY;
+const HF_API_KEY = process.env.HF_API_KEY
 const NEWS_API_KEY = "40769658978f4efba8a4a5cb12b5c650"; 
 
 // ✅ Function to Fetch Stock Price from Yahoo Finance

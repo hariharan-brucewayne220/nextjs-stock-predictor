@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import axios from "axios";
 
 const HF_CHATBOT_MODEL = "https://hariharan220-stock-predictor.hf.space/predict";
-const HF_API_KEY = process.env.HF_API_KEY;
+const HF_API_KEY = process.env.HF_API_KEY
 
 export async function POST(req: Request) {
   try {
