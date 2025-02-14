@@ -56,6 +56,23 @@ export default function Chatbot({ stockSymbol }: { stockSymbol: string }) {
     setLoading(false);
   };
 
+  interface StockData {
+    symbol: string;
+    timestamps: string[];
+    open: number[];
+    high: number[];
+    low: number[];
+    close: number[];
+    volume: number[];
+    indicators: {
+      SMA_14: number[];
+      EMA_14: number[];
+      RSI_14: number[];
+      MACD: number[];
+      Signal_Line: number[];
+    };
+  }
+  
   // ✅ Handle Stock Price Prediction
   const handlePredictStock = async () => {
     setPredicting(true);
@@ -75,7 +92,7 @@ export default function Chatbot({ stockSymbol }: { stockSymbol: string }) {
         }
 
         // ✅ Ensure all arrays exist before mapping
-        const formattedPrices = stockData.close.slice(-150).map((_, index:number) => [
+        const formattedPrices = stockData.close.slice(-150).map((_:StockData, index:number) => [
             stockData.close?.[index] || 0,  // Handle missing values
             stockData.open?.[index] || stockData.close?.[index] || 0,
             stockData.high?.[index] || stockData.close?.[index] || 0,

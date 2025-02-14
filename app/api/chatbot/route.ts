@@ -21,10 +21,14 @@ async function getStockPrice(symbol: string) {
     console.log(`✅ Stock Price for ${symbol}: $${latestClose}`);
     return latestClose;
   } catch (error) {
-    console.error("❌ Error fetching stock price:", error.message);
+    console.error("❌ Error fetching stock price:", error);
     return null;
   }
 }
+interface NewsArticle {
+  title: string;
+}
+
 
 // ✅ Function to Fetch Latest News Related to Stock
 async function getStockNews(symbol: string) {
@@ -41,12 +45,12 @@ async function getStockNews(symbol: string) {
     }
 
     // ✅ Extract latest 3 headlines for analysis
-    const newsText = articles.slice(0, 3).map((a: any) => `- ${a.title}`).join("\n");
+    const newsText = articles.slice(0, 3).map((a: NewsArticle) => `- ${a.title}`).join("\n");
 
     console.log("📝 Selected News Headlines:", newsText);
     return newsText;
   } catch (error) {
-    console.error("❌ Error fetching news:", error.message);
+    console.error("❌ Error fetching news:", error);
     return "No recent news available.";
   }
 }
@@ -64,43 +68,6 @@ async function analyzeSentiment(newsText: string) {
   }
 }
 
-function formatAiResponse(aiDecision: string): string {
-  if (!aiDecision) return "No recommendation available.";
-
-  // ✅ Normalize & split into lines
-  const lines = aiDecision.split("\n").map(line => line.trim()).filter(line => line);
-
-  // ✅ Default fallback values
-  let recommendation = "No clear recommendation found.";
-  let explanation = "No explanation provided.";
-
-  for (let i = lines.length-1; i >0; i--) {
-    const line = lines[i];
-
-    // ✅ Extract recommendation (Buy, Sell, Hold)
-    if (line.toLowerCase().includes("investment recommendation") || line.toLowerCase().includes("recommendation")) {
-      for (const nextLine of lines.slice(i)) {
-        if (nextLine.toLowerCase().includes("buy")) {
-          recommendation = "Buy";
-          break;
-        } else if (nextLine.toLowerCase().includes("sell")) {
-          recommendation = "Sell";
-          break;
-        } else if (nextLine.toLowerCase().includes("hold")) {
-          recommendation = "Hold";
-          break;
-        }
-      }
-    }
-
-    // ✅ Extract explanation if available
-    if (line.toLowerCase().includes("explanation")) {
-      explanation = lines.slice(i).join(" ");// Take the next line as explanation
-    }
-  }
-
-  return `📢 **Recommendation:** ${recommendation}\n\n📝 **Explanation:** ${explanation}`;
-}
 function extractRecommendation(aiDecision: string): string {
   // Extract the recommendation (Buy, Sell, or Hold)
   const recommendationRegex = /\*\*Recommendation:\*\*\s*(Buy|Sell|Hold)/i;
@@ -194,7 +161,7 @@ Based on the stock's performance, latest trends, and market sentiment, provide a
 
   } catch (error) {
     console.error("❌ ERROR in Chatbot API:", error);
-    return NextResponse.json({ error: "AI response failed", details: error.message }, { status: 500 });
+    return NextResponse.json({ error: "AI response failed", details: error }, { status: 500 });
   }
 }
 

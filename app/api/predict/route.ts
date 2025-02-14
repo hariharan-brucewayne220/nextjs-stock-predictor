@@ -25,10 +25,11 @@ export async function POST(req: Request) {
     );
 
     console.log("✅ Prediction successful:", response.data);
+    console.log("✅ api key:", HF_API_KEY);
 
     return NextResponse.json(response.data);
-  } catch (error: any) {
-    console.error("❌ Error in stock prediction:", error.message);
+  } catch (error) {
+    console.error("❌ Error in stock prediction:", error);
     return NextResponse.json({ error: "Failed to predict stock price" }, { status: 500 });
   }
 }

@@ -4,8 +4,25 @@ import { Line } from "react-chartjs-2";
 import { Chart as ChartJS, CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend } from "chart.js";
 
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend);
+interface StockData {
+  symbol: string;
+  timestamps: string[];
+  open: number[];
+  high: number[];
+  low: number[];
+  close: number[];
+  volume: number[];
+  indicators: {
+    SMA_14: number[];
+    EMA_14: number[];
+    RSI_14: number[];
+    MACD: number[];
+    Signal_Line: number[];
+  };
+}
 
-export default function StockChart({ data }: { data: any }) {
+
+export default function StockChart({ data }: { data: StockData }) {
 
   console.log(data + "is not available")
   if (!data || !data.timestamps || !data.close) return <p>No data available</p>;

@@ -8,10 +8,26 @@ import StockChart from "./components/StockChart";
 import Chatbot from "./components/Chatbot";  // Import Chatbot Component
 
 const STOCK_OPTIONS = ["AAPL", "GOOGL", "MSFT", "TSLA","NVDA"]; // ✅ Stock Selection
+interface StockData {
+  symbol: string;
+  timestamps: string[];
+  open: number[];
+  high: number[];
+  low: number[];
+  close: number[];
+  volume: number[];
+  indicators: {
+    SMA_14: number[];
+    EMA_14: number[];
+    RSI_14: number[];
+    MACD: number[];
+    Signal_Line: number[];
+  };
+}
 
 export default function Home() {
   const [stockSymbol, setStockSymbol] = useState("AAPL"); // ✅ Default stock
-  const [stockData, setStockData] = useState<any>(null);
+  const [stockData, setStockData] = useState<StockData | null>(null);
   const [loading, setLoading] = useState(true);
   const [aiInsights, setAiInsights] = useState<string | null>(null);
 
@@ -62,11 +78,12 @@ export default function Home() {
           ))}
         </TextField>
 
-        {loading ? (
-          <CircularProgress />
-        ) : (
-          <StockChart data={stockData} />
-        )}
+        {loading || stockData === null ? (
+            <CircularProgress />
+          ) : (
+            <StockChart data={stockData} />
+          )}
+
 
         {/* AI Insights Section */}
         <Box mt={4}>

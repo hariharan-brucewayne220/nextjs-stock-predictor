@@ -1,9 +1,18 @@
 import { NextResponse } from "next/server";
 import axios from "axios";
+interface NewsData {
+  stock: string;
+  summary: string;
+}
+
 
 const NEWS_CACHE_DURATION = 60 * 10 * 1000; // 10 minutes (Cache Duration)
-let newsCache: { [key: string]: { timestamp: number; data: any } } = {}; // Cache Object
+const newsCache: { [key: string]: { timestamp: number; data: NewsData } } = {}; // Cache Object
 let stockSymbol="";  
+interface NewsArticle {
+  title: string;
+}
+
 export async function GET(req: Request) {
   try {
     // ✅ Extract stock symbol from query parameters
@@ -27,7 +36,7 @@ export async function GET(req: Request) {
     }
 
     // ✅ Extract latest 3 headlines
-    const newsText = articles.slice(0, 3).map((a: any) => a.title).join(". ");
+    const newsText = articles.slice(0, 3).map((a: NewsArticle) => a.title).join(". ");
 
     // ✅ Store result in cache
     newsCache[stockSymbol] = { timestamp: Date.now(), data: { stock: stockSymbol, summary: newsText } };

@@ -18,7 +18,7 @@ export async function POST(req: Request) {
     console.log("✅ Sentiment API Response:", response.data);
     return NextResponse.json(response.data);
   } catch (error) {
-    console.error("❌ Error in Sentiment Analysis:", error.message);
+    console.error("❌ Error in Sentiment Analysis:", error);
     return NextResponse.json({ error: "Failed to analyze sentiment" }, { status: 500 });
   }
 }

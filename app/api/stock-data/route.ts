@@ -26,21 +26,21 @@ const calculateEMA = (data: number[], period: number) => {
 
 // ✅ Compute Relative Strength Index (RSI)
 const calculateRSI = (data: number[], period: number) => {
-  let gains = [];
-  let losses = [];
-  let rsi = [];
+  const gains = [];
+  const losses = [];
+  const rsi = [];
 
   for (let i = 1; i < data.length; i++) {
-    let change = data[i] - data[i - 1];
+    const change = data[i] - data[i - 1];
     gains.push(change > 0 ? change : 0);
     losses.push(change < 0 ? Math.abs(change) : 0);
   }
 
   for (let i = period; i < gains.length; i++) {
-    let avgGain = gains.slice(i - period, i).reduce((a, b) => a + b, 0) / period;
-    let avgLoss = losses.slice(i - period, i).reduce((a, b) => a + b, 0) / period;
+    const avgGain = gains.slice(i - period, i).reduce((a, b) => a + b, 0) / period;
+    const avgLoss = losses.slice(i - period, i).reduce((a, b) => a + b, 0) / period;
 
-    let rs = avgLoss === 0 ? 100 : avgGain / avgLoss;
+    const rs = avgLoss === 0 ? 100 : avgGain / avgLoss;
     rsi.push(100 - 100 / (1 + rs));
   }
 
@@ -85,7 +85,7 @@ const fetchFundamentals = async (stockSymbol: string) => {
         Debt_to_Equity: parseFloat(fundamentals.DebtToEquity) || 0,
       };
     } catch (error) {
-      console.error(`⚠️ Error fetching fundamentals for ${stockSymbol}:`, error.message);
+      console.error(`⚠️ Error fetching fundamentals for ${stockSymbol}:`, error);
       return { PE_Ratio: 0, ROE: 0, EPS: 0, Debt_to_Equity: 0 };
     }
   };
