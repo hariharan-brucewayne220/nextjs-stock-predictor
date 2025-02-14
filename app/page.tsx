@@ -7,7 +7,7 @@ import axios from "axios";
 import StockChart from "./components/StockChart";
 import Chatbot from "./components/Chatbot";  // Import Chatbot Component
 
-const STOCK_OPTIONS = ["AAPL", "GOOGL", "MSFT", "TSLA","NVDA"]; // ✅ Stock Selection
+const STOCK_OPTIONS = ["AAPL", "GOOG", "MSFT", "TSLA","NVDA"]; // ✅ Stock Selection
 interface StockData {
   symbol: string;
   timestamps: string[];
