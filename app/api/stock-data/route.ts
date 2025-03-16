@@ -10,13 +10,6 @@ interface AlphaVantageResponse {
   [key: string]: string | number; // for other potential fields
 }
 
-interface APIError extends Error {
-  response?: {
-    status: number;
-    data: Record<string, unknown>;
-  };
-}
-
 interface YahooFinanceQuote {
   close: number[];
   open: number[];
@@ -36,11 +29,17 @@ interface YahooFinanceResponse {
   };
 }
 
-// Add type definitions at the top
+interface APIErrorResponse {
+  error?: string;
+  message?: string;
+  code?: string;
+  [key: string]: unknown;
+}
+
 interface APIError extends Error {
   response?: {
     status: number;
-    data: any;
+    data: APIErrorResponse;
   };
 }
 
@@ -256,7 +255,7 @@ export async function GET(req: Request) {
     console.error("❌ Error fetching stock data:", error);
     const apiError = error as APIError;
     const statusCode = apiError.response?.status || 500;
-    const errorMessage = apiError.message || "Failed to fetch stock data";
+    const errorMessage = apiError.response?.data?.message || "Failed to fetch stock data";
     return NextResponse.json({ error: errorMessage }, { status: statusCode });
   }
 }
