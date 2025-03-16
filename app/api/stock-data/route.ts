@@ -1,6 +1,14 @@
 import { NextResponse } from "next/server";
 import axios from "axios";
 
+// Add type definitions at the top
+interface APIError extends Error {
+  response?: {
+    status: number;
+    data: any;
+  };
+}
+
 // ✅ Helper function to get timestamp (in seconds)
 const getTimestamp = (daysAgo: number) => {
   return Math.floor((Date.now() - daysAgo * 24 * 60 * 60 * 1000) / 1000);
@@ -81,9 +89,10 @@ const fetchFundamentals = async (stockSymbol: string) => {
             }
           );
           break;
-        } catch (error: any) {
+        } catch (error) {
           retryCount++;
-          if (error.response?.status === 429) {
+          const apiError = error as APIError;
+          if (apiError.response?.status === 429) {
             // Rate limit hit, wait before retrying
             await new Promise(resolve => setTimeout(resolve, 2000));
           } else if (retryCount === maxRetries) {
@@ -149,12 +158,13 @@ export async function GET(req: Request) {
           }
         );
         break;
-      } catch (error: any) {
+      } catch (error) {
         retryCount++;
-        if (error.response?.status === 429) {
+        const apiError = error as APIError;
+        if (apiError.response?.status === 429) {
           // Rate limit hit, wait before retrying
           await new Promise(resolve => setTimeout(resolve, 2000));
-        } else if (error.response?.status === 404) {
+        } else if (apiError.response?.status === 404) {
           throw new Error(`Stock symbol ${stockSymbol} not found`);
         } else if (retryCount === maxRetries) {
           throw error;
@@ -211,10 +221,11 @@ export async function GET(req: Request) {
       },
       fundamentals, // ✅ PE Ratio, ROE, EPS, Debt-to-Equity
     });
-  } catch (error: any) {
+  } catch (error) {
     console.error("❌ Error fetching stock data:", error);
-    const statusCode = error.response?.status || 500;
-    const errorMessage = error.message || "Failed to fetch stock data";
+    const apiError = error as APIError;
+    const statusCode = apiError.response?.status || 500;
+    const errorMessage = apiError.message || "Failed to fetch stock data";
     return NextResponse.json({ error: errorMessage }, { status: statusCode });
   }
 }

@@ -4,17 +4,40 @@ import { useState, useEffect } from "react";
 import { Box, TextField, Button, Typography, Paper, Alert, CircularProgress } from "@mui/material";
 import axios from "axios";
 
+interface StockResponse {
+  stockSymbol: string;
+  stockPrice: number;
+  newsText: string;
+  sentiment: string;
+  aiDecision: string;
+  predictedPrice?: number;
+}
+
+interface StockData {
+  close: number[];
+  open: number[];
+  high: number[];
+  low: number[];
+  volume: number[];
+  indicators: {
+    SMA_14: number[];
+    EMA_14: number[];
+    RSI_14: number[];
+    MACD: number[];
+  };
+}
+
+interface APIError {
+  response?: {
+    status: number;
+    data: any;
+  };
+  message: string;
+}
+
 export default function Chatbot({ stockSymbol }: { stockSymbol: string }) {
   const [question, setQuestion] = useState("");
-  const [response, setResponse] = useState<{
-    stockSymbol: string;
-    stockPrice: number;
-    newsText: string;
-    sentiment: string;
-    aiDecision: string;
-    predictedPrice?: number;
-  } | null>(null);
-
+  const [response, setResponse] = useState<StockResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [predicting, setPredicting] = useState(false);
@@ -56,73 +79,55 @@ export default function Chatbot({ stockSymbol }: { stockSymbol: string }) {
     setLoading(false);
   };
 
-  interface StockData {
-    symbol: string;
-    timestamps: string[];
-    open: number[];
-    high: number[];
-    low: number[];
-    close: number[];
-    volume: number[];
-    indicators: {
-      SMA_14: number[];
-      EMA_14: number[];
-      RSI_14: number[];
-      MACD: number[];
-      Signal_Line: number[];
-    };
-  }
-  
   // ✅ Handle Stock Price Prediction
   const handlePredictStock = async () => {
     setPredicting(true);
     setError(null);
 
     try {
-        console.log("Fetching stock data...");
-        const stockDataRes = await axios.get(`/api/stock-data?symbol=${stockSymbol}`);
-        const stockData = stockDataRes.data;
+      console.log("Fetching stock data...");
+      const stockDataRes = await axios.get<{ data: StockData }>(`/api/stock-data?symbol=${stockSymbol}`);
+      const stockData = stockDataRes.data;
 
-        // ✅ Log stockData to debug issues
-        console.log("Stock Data:", stockData);
+      console.log("Stock Data:", stockData);
 
-        // ✅ Check if data exists and is properly structured
-        if (!stockData || !stockData.close || stockData.close.length < 150) {
-            throw new Error("Not enough stock data available.");
-        }
+      if (!stockData || !stockData.close || stockData.close.length < 150) {
+        throw new Error("Not enough stock data available.");
+      }
 
-        // ✅ Ensure all arrays exist before mapping
-        const formattedPrices = stockData.close.slice(-150).map((_, index) => [
-            stockData.close[index] || 0,
-            stockData.open[index] || stockData.close[index] || 0,
-            stockData.high[index] || stockData.close[index] || 0,
-            stockData.low[index] || stockData.close[index] || 0,
-            stockData.volume[index] || 0,
-            stockData.indicators.SMA_14[index] || 0,
-            stockData.indicators.EMA_14[index] || 0,
-            stockData.indicators.RSI_14[index] || 50,
-            stockData.indicators.MACD[index] || 0,
-            stockData.fundamentals?.PE_Ratio || 0,
-        ]);
+      const formattedPrices = stockData.close.slice(-150).map((_, index) => [
+        stockData.close[index] || 0,
+        stockData.open[index] || stockData.close[index] || 0,
+        stockData.high[index] || stockData.close[index] || 0,
+        stockData.low[index] || stockData.close[index] || 0,
+        stockData.volume[index] || 0,
+        stockData.indicators.SMA_14[index] || 0,
+        stockData.indicators.EMA_14[index] || 0,
+        stockData.indicators.RSI_14[index] || 50,
+        stockData.indicators.MACD[index] || 0,
+      ]);
 
-        console.log("Formatted Prices:", formattedPrices);
+      console.log("Formatted Prices:", formattedPrices);
 
-        // ✅ Send data to prediction API
-        const predictRes = await axios.post("/api/predict", { stockSymbol, prices: formattedPrices });
+      const predictRes = await axios.post<{ predicted_price: number }>("/api/predict", {
+        stockSymbol,
+        prices: formattedPrices,
+      });
 
-        if (predictRes.data && predictRes.data.predicted_price) {
-          setResponse(prev => ({
-            ...prev,
-            predictedPrice: predictRes.data.predicted_price
-          }));
-        } else {
-          throw new Error("Invalid prediction response");
-        }
-    } catch (error: any) {
-        console.error("❌ Error predicting stock price:", error);
-        setError(error.message || "Failed to predict stock price. Please try again later.");
+      if (predictRes.data && predictRes.data.predicted_price) {
+        setResponse((prev) => ({
+          ...prev!,
+          predictedPrice: predictRes.data.predicted_price,
+        }));
+      } else {
+        throw new Error("Invalid prediction response");
+      }
+    } catch (error) {
+      const apiError = error as APIError;
+      console.error("❌ Error predicting stock price:", error);
+      setError(apiError.message || "Failed to predict stock price. Please try again later.");
     } finally {
-        setPredicting(false);
+      setPredicting(false);
     }
   };
 
