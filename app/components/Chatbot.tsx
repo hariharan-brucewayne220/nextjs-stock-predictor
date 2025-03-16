@@ -27,12 +27,15 @@ interface StockData {
   };
 }
 
-interface APIError {
+interface APIError extends Error {
   response?: {
     status: number;
-    data: any;
+    data: Record<string, unknown>;
   };
-  message: string;
+}
+
+interface PredictionResponse {
+  predicted_price: number;
 }
 
 export default function Chatbot({ stockSymbol }: { stockSymbol: string }) {
@@ -69,14 +72,15 @@ export default function Chatbot({ stockSymbol }: { stockSymbol: string }) {
     setError(null);
 
     try {
-      const res = await axios.post("/api/chatbot", { stockSymbol, question });
+      const res = await axios.post<StockResponse>("/api/chatbot", { stockSymbol, question });
       setResponse(res.data);
     } catch (error) {
+      const apiError = error as APIError;
       console.error("❌ Error fetching chatbot response:", error);
-      setError("Failed to get a response. Please try again later.");
+      setError(apiError.message || "Failed to get a response. Please try again later.");
+    } finally {
+      setLoading(false);
     }
-
-    setLoading(false);
   };
 
   // ✅ Handle Stock Price Prediction
@@ -86,7 +90,7 @@ export default function Chatbot({ stockSymbol }: { stockSymbol: string }) {
 
     try {
       console.log("Fetching stock data...");
-      const stockDataRes = await axios.get<{ data: StockData }>(`/api/stock-data?symbol=${stockSymbol}`);
+      const stockDataRes = await axios.get<StockData>(`/api/stock-data?symbol=${stockSymbol}`);
       const stockData = stockDataRes.data;
 
       console.log("Stock Data:", stockData);
@@ -109,7 +113,7 @@ export default function Chatbot({ stockSymbol }: { stockSymbol: string }) {
 
       console.log("Formatted Prices:", formattedPrices);
 
-      const predictRes = await axios.post<{ predicted_price: number }>("/api/predict", {
+      const predictRes = await axios.post<PredictionResponse>("/api/predict", {
         stockSymbol,
         prices: formattedPrices,
       });

@@ -1,6 +1,41 @@
 import { NextResponse } from "next/server";
 import axios from "axios";
 
+// Define more specific types for API responses
+interface AlphaVantageResponse {
+  PERatio: string;
+  ReturnOnEquityTTM: string;
+  EPS: string;
+  DebtToEquity: string;
+  [key: string]: string | number; // for other potential fields
+}
+
+interface APIError extends Error {
+  response?: {
+    status: number;
+    data: Record<string, unknown>;
+  };
+}
+
+interface YahooFinanceQuote {
+  close: number[];
+  open: number[];
+  high: number[];
+  low: number[];
+  volume: number[];
+}
+
+interface YahooFinanceResponse {
+  chart?: {
+    result?: Array<{
+      timestamp: number[];
+      indicators: {
+        quote: YahooFinanceQuote[];
+      };
+    }>;
+  };
+}
+
 // Add type definitions at the top
 interface APIError extends Error {
   response?: {
@@ -73,14 +108,13 @@ if (!ALPHA_VANTAGE_API_KEY) {
 
 const fetchFundamentals = async (stockSymbol: string) => {
     try {
-      // Fetch stock overview data with retry logic
       const maxRetries = 3;
       let retryCount = 0;
       let response;
 
       while (retryCount < maxRetries) {
         try {
-          response = await axios.get(
+          response = await axios.get<AlphaVantageResponse>(
             `https://www.alphavantage.co/query?function=OVERVIEW&symbol=${stockSymbol}&apikey=${ALPHA_VANTAGE_API_KEY}`,
             {
               headers: {
@@ -93,7 +127,6 @@ const fetchFundamentals = async (stockSymbol: string) => {
           retryCount++;
           const apiError = error as APIError;
           if (apiError.response?.status === 429) {
-            // Rate limit hit, wait before retrying
             await new Promise(resolve => setTimeout(resolve, 2000));
           } else if (retryCount === maxRetries) {
             throw error;
@@ -142,14 +175,13 @@ export async function GET(req: Request) {
     const endTime = getTimestamp(0);
     const startTime = getTimestamp(duration);
 
-    // Add retry logic for Yahoo Finance API
     const maxRetries = 3;
     let retryCount = 0;
     let response;
 
     while (retryCount < maxRetries) {
       try {
-        response = await axios.get(
+        response = await axios.get<YahooFinanceResponse>(
           `https://query1.finance.yahoo.com/v8/finance/chart/${stockSymbol}?interval=1d&period1=${startTime}&period2=${endTime}`,
           {
             headers: {
@@ -162,7 +194,6 @@ export async function GET(req: Request) {
         retryCount++;
         const apiError = error as APIError;
         if (apiError.response?.status === 429) {
-          // Rate limit hit, wait before retrying
           await new Promise(resolve => setTimeout(resolve, 2000));
         } else if (apiError.response?.status === 404) {
           throw new Error(`Stock symbol ${stockSymbol} not found`);
