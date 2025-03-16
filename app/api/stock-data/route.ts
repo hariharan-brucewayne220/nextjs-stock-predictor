@@ -58,21 +58,41 @@ const calculateMACD = (data: number[], shortPeriod: number = 12, longPeriod: num
   return { macd, signalLine };
 };
 
-
-const ALPHA_VANTAGE_API_KEY = "GAY0W2NVBNCWXGUQ"; // Replace with your API key
+const ALPHA_VANTAGE_API_KEY = process.env.ALPHA_VANTAGE_API_KEY;
+if (!ALPHA_VANTAGE_API_KEY) {
+  throw new Error('ALPHA_VANTAGE_API_KEY environment variable is not set');
+}
 
 const fetchFundamentals = async (stockSymbol: string) => {
     try {
-      // Fetch stock overview data
-      const response = await axios.get(
-        `https://www.alphavantage.co/query?function=OVERVIEW&symbol=${stockSymbol}&apikey=${ALPHA_VANTAGE_API_KEY}`
-      );
+      // Fetch stock overview data with retry logic
+      const maxRetries = 3;
+      let retryCount = 0;
+      let response;
+
+      while (retryCount < maxRetries) {
+        try {
+          response = await axios.get(
+            `https://www.alphavantage.co/query?function=OVERVIEW&symbol=${stockSymbol}&apikey=${ALPHA_VANTAGE_API_KEY}`,
+            {
+              headers: {
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+              }
+            }
+          );
+          break;
+        } catch (error: any) {
+          retryCount++;
+          if (error.response?.status === 429) {
+            // Rate limit hit, wait before retrying
+            await new Promise(resolve => setTimeout(resolve, 2000));
+          } else if (retryCount === maxRetries) {
+            throw error;
+          }
+        }
+      }
   
-      // Log response to debug API issues
-      console.log("API Response:", response.data);
-  
-      // Ensure response has data
-      if (!response.data || Object.keys(response.data).length === 0) {
+      if (!response?.data || Object.keys(response.data).length === 0) {
         throw new Error(`No data returned for ${stockSymbol}`);
       }
   
@@ -88,36 +108,69 @@ const fetchFundamentals = async (stockSymbol: string) => {
       console.error(`⚠️ Error fetching fundamentals for ${stockSymbol}:`, error);
       return { PE_Ratio: 0, ROE: 0, EPS: 0, Debt_to_Equity: 0 };
     }
-  };
+};
 
 // Example usage
-fetchFundamentals("AAPL").then(console.log);
-
+//fetchFundamentals("AAPL").then(console.log);
 
 // ✅ Stock Data API with Indicators & Fundamentals
 export async function GET(req: Request) {
   try {
     const { searchParams } = new URL(req.url);
-    const stockSymbol = searchParams.get("symbol") || "AAPL";
+    const stockSymbol = searchParams.get("symbol")?.toUpperCase();
+    
+    if (!stockSymbol) {
+      return NextResponse.json({ error: "Stock symbol is required" }, { status: 400 });
+    }
+
     const duration = parseInt(searchParams.get("days") || "250");
+    if (isNaN(duration) || duration <= 0) {
+      return NextResponse.json({ error: "Invalid duration parameter" }, { status: 400 });
+    }
 
     console.log(`📌 Fetching ${duration} days of data for ${stockSymbol}...`);
 
-    // ✅ Get timestamps for Yahoo Finance API
     const endTime = getTimestamp(0);
     const startTime = getTimestamp(duration);
 
-    // ✅ Fetch historical stock data from Yahoo Finance
-    const response = await axios.get(
-      `https://query1.finance.yahoo.com/v8/finance/chart/${stockSymbol}?interval=1d&period1=${startTime}&period2=${endTime}`
-    );
+    // Add retry logic for Yahoo Finance API
+    const maxRetries = 3;
+    let retryCount = 0;
+    let response;
 
-    if (!response.data.chart?.result?.length) {
+    while (retryCount < maxRetries) {
+      try {
+        response = await axios.get(
+          `https://query1.finance.yahoo.com/v8/finance/chart/${stockSymbol}?interval=1d&period1=${startTime}&period2=${endTime}`,
+          {
+            headers: {
+              'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+            }
+          }
+        );
+        break;
+      } catch (error: any) {
+        retryCount++;
+        if (error.response?.status === 429) {
+          // Rate limit hit, wait before retrying
+          await new Promise(resolve => setTimeout(resolve, 2000));
+        } else if (error.response?.status === 404) {
+          throw new Error(`Stock symbol ${stockSymbol} not found`);
+        } else if (retryCount === maxRetries) {
+          throw error;
+        }
+      }
+    }
+
+    if (!response?.data.chart?.result?.length) {
       console.error("❌ No stock data found.");
-      return NextResponse.json({ error: "No stock data available" }, { status: 404 });
+      return NextResponse.json({ error: `No data available for ${stockSymbol}` }, { status: 404 });
     }
 
     const stockData = response.data.chart.result[0];
+    if (!stockData.indicators?.quote?.[0]) {
+      return NextResponse.json({ error: `Invalid data format for ${stockSymbol}` }, { status: 500 });
+    }
 
     // ✅ Extract timestamps
     const timestamps = stockData.timestamp.map((ts: number) =>
@@ -158,8 +211,10 @@ export async function GET(req: Request) {
       },
       fundamentals, // ✅ PE Ratio, ROE, EPS, Debt-to-Equity
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error("❌ Error fetching stock data:", error);
-    return NextResponse.json({ error: "Failed to fetch stock data" }, { status: 500 });
+    const statusCode = error.response?.status || 500;
+    const errorMessage = error.message || "Failed to fetch stock data";
+    return NextResponse.json({ error: errorMessage }, { status: statusCode });
   }
 }

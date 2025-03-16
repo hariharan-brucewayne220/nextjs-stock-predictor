@@ -92,17 +92,17 @@ export default function Chatbot({ stockSymbol }: { stockSymbol: string }) {
         }
 
         // ✅ Ensure all arrays exist before mapping
-        const formattedPrices = stockData.close.slice(-150).map((_:StockData, index:number) => [
-            stockData.close?.[index] || 0,  // Handle missing values
-            stockData.open?.[index] || stockData.close?.[index] || 0,
-            stockData.high?.[index] || stockData.close?.[index] || 0,
-            stockData.low?.[index] || stockData.close?.[index] || 0,
-            stockData.volume?.[index] || 0,
-            stockData.SMA_14?.[index] || 0,
-            stockData.EMA_14?.[index] || 0,
-            stockData.RSI_14?.[index] || 50, // Default neutral RSI
-            stockData.MACD?.[index] || 0,
-            stockData.PE_Ratio || 0, // Fundamental Data (not an array, keep as is)
+        const formattedPrices = stockData.close.slice(-150).map((_, index) => [
+            stockData.close[index] || 0,
+            stockData.open[index] || stockData.close[index] || 0,
+            stockData.high[index] || stockData.close[index] || 0,
+            stockData.low[index] || stockData.close[index] || 0,
+            stockData.volume[index] || 0,
+            stockData.indicators.SMA_14[index] || 0,
+            stockData.indicators.EMA_14[index] || 0,
+            stockData.indicators.RSI_14[index] || 50,
+            stockData.indicators.MACD[index] || 0,
+            stockData.fundamentals?.PE_Ratio || 0,
         ]);
 
         console.log("Formatted Prices:", formattedPrices);
@@ -110,20 +110,21 @@ export default function Chatbot({ stockSymbol }: { stockSymbol: string }) {
         // ✅ Send data to prediction API
         const predictRes = await axios.post("/api/predict", { stockSymbol, prices: formattedPrices });
 
-        if (predictRes) {
-          setResponse((prevResponse) => ({
-            ...prevResponse!, // Spread the existing response (non-null assertion if you're sure it's set)
-            predictedPrice: predictRes.data.predicted_price,
+        if (predictRes.data && predictRes.data.predicted_price) {
+          setResponse(prev => ({
+            ...prev,
+            predictedPrice: predictRes.data.predicted_price
           }));
-          
+        } else {
+          throw new Error("Invalid prediction response");
         }
-    } catch (error) {
+    } catch (error: any) {
         console.error("❌ Error predicting stock price:", error);
-        setError("Failed to predict stock price. Please try again later.");
+        setError(error.message || "Failed to predict stock price. Please try again later.");
+    } finally {
+        setPredicting(false);
     }
-
-    setPredicting(false);
-};
+  };
 
 
   return (
@@ -157,12 +158,12 @@ export default function Chatbot({ stockSymbol }: { stockSymbol: string }) {
       {response && (
         <Paper elevation={3} style={{ padding: "15px", marginTop: "10px", textAlign: "left" }}>
           <Typography><strong>📌 Stock:</strong> {response.stockSymbol}</Typography>
-          <Typography><strong>💰 Current Price:</strong> ${response.stockPrice}</Typography>
+          <Typography><strong>💰 Current Price:</strong> ${response.stockPrice?.toFixed(2)}</Typography>
           <Typography><strong>📊 Market Sentiment:</strong> {response.sentiment}</Typography>
           <Typography><strong>📰 Latest Financial News:</strong> {response.newsText || "No recent news available."}</Typography>
           <Typography><strong>📢 AI Recommendation:</strong> {formatAiResponse(response.aiDecision)}</Typography>
           {response?.predictedPrice !== undefined && !isNaN(response.predictedPrice) ? (
-            <Typography><strong>🔮 Predicted Price:</strong> ${response.predictedPrice}</Typography>
+            <Typography><strong>🔮 Predicted Price:</strong> ${response.predictedPrice.toFixed(2)}</Typography>
           ) : null}
         </Paper>
       )}
